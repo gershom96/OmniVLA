@@ -14,7 +14,7 @@ import torchvision.transforms.functional as TF
 from PIL import Image
 from torchvision.transforms.functional import to_pil_image
 
-from vint_train.data.data_utils import (
+from policy_sources.visualnav_transformer.train.vint_train.data.data_utils import (
     img_path_to_data,
     calculate_sin_cos,
     get_data_path,

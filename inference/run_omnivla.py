@@ -126,7 +126,7 @@ class Inference:
     # ----------------------------
     def run_omnivla(self):
         thres_dist = 30.0
-        metric_waypoint_spacing = 0.1
+        metric_waypoint_spacing = 0.1               #for scand this is 0.38
 
         # Load current GPS & heading
         current_lat = 37.87371258374039

@@ -182,7 +182,79 @@ class PaddedCollatorForActionPrediction_Nav_MMN:
             output["lan_prompts"] = lan_prompts
                         
         return output
-        
+
+@dataclass
+class PaddedCollatorForActionPrediction_CHOP:
+    model_max_length: int
+    pad_token_id: int
+    padding_side: str = "right"
+    pixel_values_dtype: torch.dtype = torch.float32
+    num_img: int = 1
+
+    def __call__(self, instances: Sequence[Dict[str, torch.Tensor]]) -> Dict[str, torch.Tensor]:
+        input_ids = [inst["input_ids"] for inst in instances]
+        labels = [inst["labels"] for inst in instances]
+        pixel_values = [inst["pixel_values"] for inst in instances]
+        dataset_names = [inst["dataset_name"] for inst in instances] if "dataset_name" in instances[0] else None
+        lan_prompts = [inst["lan_prompt"] for inst in instances] if "lan_prompt" in instances[0] else None
+
+        # [Contract] For VLA Training =>> No "Unimodal" Data!
+        assert all([pv is not None for pv in pixel_values]), "Invalid VLA Example with `pixel_values = None`!"
+
+        # Stack all `pixel_values` --> depending on type is torch.Tensor or Dict[str, torch.Tensor]
+        if isinstance(pixel_values[0], torch.Tensor):
+            pixel_values_goal = [inst["pixel_values_goal"] for inst in instances]
+            pixel_values = torch.cat((torch.stack(pixel_values), torch.stack(pixel_values_goal)), dim=1)    
+        else:
+            raise ValueError(f"Unsupported `pixel_values` type = {type(pixel_values)}")
+
+        # Stack all actions
+        actions = torch.stack([inst["actions"].float() for inst in instances])
+        neg_actions = torch.stack([inst["neg_actions"].float() for inst in instances])
+
+        # Stack actin mask
+        action_select_mask = torch.stack(
+            [inst["action_select_mask"].float() for inst in instances]
+        )
+
+        # Stack goal_pose
+        goal_pose = torch.stack([inst["goal_pose"].float() for inst in instances])
+
+
+        # Stack obj_pose
+        obj_pose_norm = torch.stack([inst["obj_pose_norm"].float() for inst in instances])
+
+        # Stack temp_dist
+        temp_dist = torch.tensor([inst["temp_dist"] for inst in instances], dtype=torch.float32)
+        modality_id = [inst["modality_id"] for inst in instances]
+
+
+        # these are just used for visualization in visualize_train
+        img_PIL = [inst["img_PIL"] for inst in instances]
+        gimg_PIL = [inst["gimg_PIL"] for inst in instances]
+
+        output = dict(
+            pixel_values=pixel_values,
+            input_ids=input_ids,
+            labels=labels,
+            modality_id=modality_id,
+            actions=actions,
+            neg_actions=neg_actions,
+            action_select_mask=action_select_mask,
+            goal_pose=goal_pose,
+            obj_pose_norm=obj_pose_norm,
+            temp_dist=temp_dist,
+            img_PIL=img_PIL,
+            gimg_PIL=gimg_PIL,
+        )
+
+        if dataset_names is not None:
+            output["dataset_names"] = dataset_names
+        if lan_prompts is not None:
+            output["lan_prompts"] = lan_prompts
+
+        return output
+    
 @dataclass
 class PaddedCollatorForActionPrediction:
     model_max_length: int
