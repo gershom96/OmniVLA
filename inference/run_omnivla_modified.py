@@ -82,7 +82,7 @@ def init_module(
 # Inference Class
 # ===============================================================
 class Inference:
-    def __init__(self, save_dir, ego_frame_mode, save_images=False, radians=False):
+    def __init__(self, save_dir, ego_frame_mode, vla_config,save_images=False, radians=False):
         self.tick_rate = 3
         self.vla = None
         self.action_head = None
@@ -110,7 +110,7 @@ class Inference:
         self.goal_pose_loc_norm = None
 
         self.thres_dist = 30.0
-        self.metric_waypoint_spacing = 0.1
+        self.metric_waypoint_spacing = 0.38 # meter per waypoint unit for SCAND
 
         self.pose_goal = self.modality["pose_goal"]
         self.satellite = self.modality["satellite"]
@@ -120,9 +120,15 @@ class Inference:
         self.waypoints = None
         self.save_images = save_images
         self.radians = radians
+        self.vla_config = vla_config
 
     def init_vla(self):
-        cfg = InferenceConfig()
+
+        if self.vla_config is None:
+            cfg = InferenceConfig()
+        else:
+            cfg = self.vla_config
+            
         self.vla, self.action_head, self.pose_projector, self.device_id, self.NUM_PATCHES, self.action_tokenizer, self.processor = define_model(cfg)
 
         # select modality

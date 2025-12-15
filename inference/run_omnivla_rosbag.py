@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.append(os.path.dirname(__file__))
 
 from dataclasses import dataclass
-from run_omnivla import Inference, InferenceConfig, define_model
+from run_omnivla_modified import Inference, InferenceConfig, define_model
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import json
@@ -87,6 +87,7 @@ class InferenceROSBag():
         self.fig = None
         self.ax_overlay = None
         self.ax_bev = None
+        self.visualize = False
 
     def _setup_matplotlib(self):
         if self.fig is not None:
@@ -314,7 +315,8 @@ class InferenceROSBag():
             self.waypoints = self.vla.waypoints * self.vla.metric_waypoint_spacing
             self.process_waypoints()
             # print(self.waypoints)
-            self.draw()
+            if self.visualize:
+                self.draw()
             # print(f"Wayppoints for frame {idx} computed.: {self.vla.waypoints}")
 
             idx += 1
