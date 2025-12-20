@@ -90,6 +90,7 @@ class Inference:
         self.device_id = None
         self.NUM_PATCHES = None
         self.modality = None
+        self.vla_config = vla_config
 
         self.init_vla()
         self.count_id = 0
@@ -120,7 +121,6 @@ class Inference:
         self.waypoints = None
         self.save_images = save_images
         self.radians = radians
-        self.vla_config = vla_config
 
     def init_vla(self):
 
@@ -263,7 +263,7 @@ class Inference:
                 break
 
     def tick(self):
-        self.linear, self.angular = self.run_omnivla()
+        self.waypoints = self.run_omnivla()
 
     # ----------------------------
     # OmniVLA Inference
@@ -301,17 +301,18 @@ class Inference:
         self.count_id += 1
 
         self.waypoints = actions.float().cpu().numpy()
-        linear_vel_value_limit, angular_vel_value_limit = self.robot_control()
-        # Save behavior
+        # linear_vel_value_limit, angular_vel_value_limit = self.robot_control()
+        # # Save behavior
 
-        if self.save_images:
-            self.save_robot_behavior(
-                self.current_image_PIL, self.goal_image_PIL, self.goal_pose_loc_norm, self.waypoints[0],
-                linear_vel_value_limit, angular_vel_value_limit, self.metric_waypoint_spacing, modality_id.cpu().numpy()
-            )
+        # if self.save_images:
+        #     self.save_robot_behavior(
+        #         self.current_image_PIL, self.goal_image_PIL, self.goal_pose_loc_norm, self.waypoints[0],
+        #         linear_vel_value_limit, angular_vel_value_limit, self.metric_waypoint_spacing, modality_id.cpu().numpy()
+        #     )
 
-        print("linear angular", linear_vel_value_limit, angular_vel_value_limit)
-        return linear_vel_value_limit, angular_vel_value_limit
+        # print("linear angular", linear_vel_value_limit, angular_vel_value_limit)
+        # print(self.waypoints)
+        return self.waypoints
 
     # ----------------------------
     # Save Robot Behavior Visualization
