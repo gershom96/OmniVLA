@@ -19,6 +19,8 @@ config_nav/mbra_and_dataset_config_bellman.yaml
 config_nav/base_server_bellman.yaml
 visualization/
 runs/
+inference/run_omnivla_edge_.py
+omnivla-edge/
 # Ignore all __pycache__ directories everywhere
 **/__pycache__/
 # Ignore all wandb directories everywhere
