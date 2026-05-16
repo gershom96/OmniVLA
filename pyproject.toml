@@ -64,6 +64,7 @@ dependencies = [
     "datasets",
     "efficientnet_pytorch",
     "av"
+    "openai-clip"
 ]
 
 [project.optional-dependencies]
