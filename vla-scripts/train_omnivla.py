@@ -99,6 +99,7 @@ from prismatic.vla.action_tokenizer import ActionTokenizer
 from prismatic.vla.constants import ACTION_DIM, NUM_ACTIONS_CHUNK, POSE_DIM, IGNORE_INDEX
 from prismatic.vla.datasets import RLDSBatchTransform, RLDSDataset
 from prismatic.vla.datasets.dummy_dataset import Dummy_Dataset
+from prismatic.vla.datasets.vr_hmd_dataset import VRHMDTrajectoryDataset
 from prismatic.vla.datasets.rlds.utils.data_utils import save_dataset_statistics
 
 from vint_train.models.exaug.exaug import ExAug_dist_delay
@@ -119,6 +120,10 @@ class OmniVLAConfig:
     # Dataset
     data_root_dir: Path = Path("datasets/rlds")      # Directory containing RLDS datasets
     dataset_name: str = "aloha_scoop_x_into_bowl"    # Name of fine-tuning dataset (e.g., `aloha_scoop_x_into_bowl`)
+    vr_dataset_root: Optional[Path] = None           # Processed Unity dataset root containing train.jsonl / val.jsonl
+    vr_train_manifest: str = "train.jsonl"           # Train manifest filename inside `vr_dataset_root`
+    vr_val_manifest: str = "val.jsonl"               # Validation manifest filename inside `vr_dataset_root`
+    vr_num_workers: int = 4                          # Number of workers used for the Unity dataset
     run_root_dir: Path = Path("runs")                # Path to directory to store logs & checkpoints
     shuffle_buffer_size: int = 100_000               # Dataloader shuffle buffer size (can reduce if OOM errors occur)
 
@@ -928,15 +933,30 @@ def train_omnivla(cfg: OmniVLAConfig) -> None:
     #Data loader and sampler setting (I provide the sample dataloader. Please replace this dataloader with your dataset. Following sample code, you can combine the mutiple datasets.)        
     train_dataset_dummy = []
     test_dataset_dummy = []    
-    for data_split_type in ["train", "test"]:   
-        #dummy dataset
-        dataset_dummy = Dummy_Dataset(   
-            context_size = config["context_size"],             
-            action_tokenizer=action_tokenizer,
-            base_tokenizer=processor.tokenizer, 
-            image_transform=processor.image_processor.apply_transform,
-            prompt_builder_fn=PurePromptBuilder,                                                                         
-        ) 
+    use_vr_dataset = cfg.dataset_name == "vr_hmd"
+    for data_split_type in ["train", "test"]:
+        if use_vr_dataset:
+            if cfg.vr_dataset_root is None:
+                raise ValueError("`--vr_dataset_root` is required when `--dataset_name vr_hmd`.")
+            manifest_name = cfg.vr_train_manifest if data_split_type == "train" else cfg.vr_val_manifest
+            dataset_dummy = VRHMDTrajectoryDataset(
+                context_size=config["context_size"],
+                action_tokenizer=action_tokenizer,
+                base_tokenizer=processor.tokenizer,
+                image_transform=processor.image_processor.apply_transform,
+                prompt_builder_fn=PurePromptBuilder,
+                manifest_path=cfg.vr_dataset_root / manifest_name,
+                split="train" if data_split_type == "train" else "val",
+            )
+        else:
+            #dummy dataset
+            dataset_dummy = Dummy_Dataset(
+                context_size=config["context_size"],
+                action_tokenizer=action_tokenizer,
+                base_tokenizer=processor.tokenizer,
+                image_transform=processor.image_processor.apply_transform,
+                prompt_builder_fn=PurePromptBuilder,
+            )
         if data_split_type == "train":
             train_dataset_dummy.append(dataset_dummy)
         elif data_split_type == "test":
@@ -951,7 +971,7 @@ def train_omnivla(cfg: OmniVLAConfig) -> None:
                 batch_size=cfg.batch_size,
                 shuffle=False,
                 collate_fn=collator,
-                num_workers=8,
+                num_workers=cfg.vr_num_workers if use_vr_dataset else 8,
                 drop_last=True,
                 persistent_workers=True,
                 sampler=sampler_train_dummy,
@@ -965,7 +985,7 @@ def train_omnivla(cfg: OmniVLAConfig) -> None:
                 batch_size=cfg.batch_size,
                 shuffle=False,
                 collate_fn=collator,
-                num_workers=8,
+                num_workers=cfg.vr_num_workers if use_vr_dataset else 8,
                 drop_last=True,
                 persistent_workers=True,
                 sampler=sampler_train_dummy,
